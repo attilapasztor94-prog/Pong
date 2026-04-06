@@ -1,6 +1,6 @@
-package com.example.pong.config;
+package org.example.pong.config;
 
-import com.example.pong.service.GameEngine;
+import org.example.pong.service.GameEngine;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
@@ -10,13 +10,19 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 @Component
 public class PongHandler extends TextWebSocketHandler {
-    @Autowired private GameEngine engine;
+
+    @Autowired
+    private GameEngine engine;
 
     @Override
-    public void afterConnectionEstablished(WebSocketSession session) { engine.addSession(session); }
+    public void afterConnectionEstablished(WebSocketSession session) {
+        engine.addSession(session);
+    }
 
     @Override
-    public void afterConnectionClosed(WebSocketSession session, CloseStatus status) { engine.removeSession(session); }
+    public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
+        engine.removeSession(session);
+    }
 
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage message) {
@@ -25,6 +31,7 @@ public class PongHandler extends TextWebSocketHandler {
             engine.restartGame();
         } else {
             try {
+                // Primește poziția Y a paletei de la Flutter
                 engine.updatePaddle(Double.parseDouble(payload));
             } catch (NumberFormatException ignored) {}
         }

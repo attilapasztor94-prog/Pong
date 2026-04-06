@@ -1,4 +1,4 @@
-package com.example.pong.config;
+package org.example.pong.config;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
@@ -9,11 +9,12 @@ import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry
 @Configuration
 @EnableWebSocket
 public class WebSocketConfig implements WebSocketConfigurer {
-    @Autowired private PongHandler pongHandler;
+
+    @Autowired
+    private PongHandler pongHandler;
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-        // Permite conexiuni din exterior
         registry.addHandler(pongHandler, "/ws").setAllowedOrigins("*");
     }
 }
