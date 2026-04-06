@@ -1,22 +1,14 @@
-# Folosim o imagine de Java 17 pentru build
+# Pasul 1: Build (folosim Temurin pentru stabilitate)
 FROM eclipse-temurin:17-jdk-jammy AS build
-
-# Copiem toate fișierele proiectului în container
+WORKDIR /app
 COPY . .
-
-# Acordăm permisiuni de executare pentru scriptul Maven Wrapper (esențial pentru Linux/Render)
 RUN chmod +x mvnw
-
-# Construim fișierul .jar (sărim peste teste pentru a fi mai rapid)
 RUN ./mvnw clean package -DskipTests
 
-# Pasul de rulare: folosim o imagine mai mică (JRE) doar pentru a rula aplicația
+# Pasul 2: Run (imaginea de rulare, foarte mică)
 FROM eclipse-temurin:17-jre-jammy
 WORKDIR /app
-COPY --from=build /target/*.jar app.jar
-
-# Expunem portul pe care ascultă Spring Boot
+# Copiem fișierul .jar generat la pasul anterior
+COPY --from=build /app/target/*.jar app.jar
 EXPOSE 8080
-
-# Comanda de pornire
 ENTRYPOINT ["java", "-jar", "app.jar"]
