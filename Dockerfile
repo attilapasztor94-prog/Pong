@@ -6,7 +6,7 @@ COPY . .
 RUN mvn clean package -DskipTests
 
 # Pasul 2: Imaginea finală, ușoară, pentru rulare
-FROM openjdk:17-jdk-slim
+FROM eclipse-temurin:17-jre-jammy
 WORKDIR /app
 # Copiem jar-ul generat din pasul anterior
 COPY --from=build /app/target/*.jar app.jar
