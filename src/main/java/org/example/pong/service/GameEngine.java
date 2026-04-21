@@ -1,5 +1,4 @@
-package org.example.pong.service; // 1. Adresa nouă a folderului service
-
+package org.example.pong.service;
 import org.example.pong.model.GameState; // 2. IMPORTUL CORECTAT (nu mai e com.example)
 import org.springframework.stereotype.Service;
 import org.springframework.web.socket.TextMessage;

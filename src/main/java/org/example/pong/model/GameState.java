@@ -1,5 +1,4 @@
 package org.example.pong.model;
-
 public class GameState {
     private double paddleY = 0.5; // Poziția de start (mijloc)
 
