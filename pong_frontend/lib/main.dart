@@ -15,22 +15,21 @@ void main() {
 }
 
 class PongPro extends StatefulWidget {
-  const PongPro({super.key}); // Rezolvă eroarea de 'key'
+  const PongPro({super.key});
 
   @override
-  State<PongPro> createState() => _PongProState(); // Rezolvă eroarea de 'private type'
+  State<PongPro> createState() => _PongProState();
 }
 
 class _PongProState extends State<PongPro> {
-  // ATENȚIE: Înlocuiește cu link-ul tău de pe Render!
-  // Exemplu: wss://pong-backend-abc.onrender.com/ws
   late final WebSocketChannel channel;
 
   @override
   void initState() {
     super.initState();
+    // AICI E MAGIA: Conexiunea cu serverul tău real din cloud! 🚀
     channel = WebSocketChannel.connect(
-      Uri.parse('wss://pong-xxxx.onrender.com/ws'),
+      Uri.parse('wss://pong-6tqc.onrender.com/ws'),
     );
   }
 
