@@ -9,17 +9,17 @@ import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry
 @EnableWebSocket
 public class WebSocketConfig implements WebSocketConfigurer {
 
-    // Am făcut variabila 'final' și am șters @Autowired
     private final PongHandler pongHandler;
 
-    // Acesta este constructorul.
-    // Spring Boot știe automat să caute PongHandler și să îl bage aici.
+    // Fiind în același pachet, Java îl găsește pe PongHandler fără import!
     public WebSocketConfig(PongHandler pongHandler) {
         this.pongHandler = pongHandler;
     }
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-        registry.addHandler(pongHandler, "/ws").setAllowedOrigins("*");
+        // Aceasta este ușa prin care intră jocul tău (adresa /ws)
+        registry.addHandler(pongHandler, "/ws")
+                .setAllowedOriginPatterns("*");
     }
 }
