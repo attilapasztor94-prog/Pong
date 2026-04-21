@@ -5,7 +5,7 @@ import 'dart:convert';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  // Blocăm ecranul în mod Landscape pentru o experiență de joc mai bună
+  // Blocăm ecranul în mod Landscape
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.landscapeLeft,
     DeviceOrientation.landscapeRight,
@@ -22,25 +22,29 @@ class PongPro extends StatefulWidget {
 }
 
 class _PongProState extends State<PongPro> {
-  late final WebSocketChannel channel;
+  WebSocketChannel? _channel;
 
   @override
   void initState() {
     super.initState();
-    // AICI E MAGIA: Conexiunea cu serverul tău real din cloud! 🚀
-    channel = WebSocketChannel.connect(
-      Uri.parse('wss://pong-6tqc.onrender.com/ws'),
-    );
+    _connectToRender();
   }
 
-  Map? state;
+  // Funcție pentru a iniția conexiunea
+  void _connectToRender() {
+    setState(() {
+      _channel = WebSocketChannel.connect(
+        Uri.parse('wss://pong-6tqc.onrender.com/ws'), // Adresa ta de Render
+      );
+    });
+  }
 
   void sendMove(double y) {
-    channel.sink.add(y.toString());
+    _channel?.sink.add(y.toString());
   }
 
   void resetGame() {
-    channel.sink.add("RESET");
+    _channel?.sink.add("RESET");
   }
 
   @override
@@ -48,31 +52,46 @@ class _PongProState extends State<PongPro> {
     return Scaffold(
       backgroundColor: Colors.grey[900],
       body: StreamBuilder(
-        stream: channel.stream,
+        stream: _channel?.stream,
         builder: (context, snapshot) {
+          // CAZ 1: Eroare de conexiune (Serverul e oprit sau se trezește greu)
           if (snapshot.hasError) {
-            return const Center(
-              child: Text(
-                "Eroare de conexiune la Render.\nVerifică dacă serverul este 'Live'!",
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.red, fontSize: 18),
-              ),
-            );
-          }
-          if (!snapshot.hasData) {
-            return const Center(
+            return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  CircularProgressIndicator(color: Colors.red),
-                  SizedBox(height: 20),
-                  Text("Se trezește serverul de pe Render...", style: TextStyle(color: Colors.white)),
+                  const Text(
+                    "Serverul de pe Render încă se trezește...\n(Poate dura până la 1 minut)",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.redAccent, fontSize: 18),
+                  ),
+                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    onPressed: _connectToRender, // Reîncearcă conexiunea
+                    child: const Text("REÎNCEARCĂ CONEXIUNEA"),
+                  )
                 ],
               ),
             );
           }
 
-          state = json.decode(snapshot.data.toString());
+          // CAZ 2: Se așteaptă datele (Se stabilește legătura)
+          if (!snapshot.hasData) {
+            return const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(color: Colors.blue),
+                  SizedBox(height: 20),
+                  Text("Se stabilește conexiunea cu Render...",
+                      style: TextStyle(color: Colors.white70)),
+                ],
+              ),
+            );
+          }
+
+          // CAZ 3: Conexiune reușită - Jocul pornește
+          final state = json.decode(snapshot.data.toString());
 
           return Center(
             child: Container(
@@ -97,34 +116,34 @@ class _PongProState extends State<PongPro> {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                           children: [
-                            Text("${state!['scoreAI']}", style: const TextStyle(color: Colors.blue, fontSize: 60, fontWeight: FontWeight.bold)),
-                            Text("${state!['scorePlayer']}", style: const TextStyle(color: Colors.red, fontSize: 60, fontWeight: FontWeight.bold)),
+                            Text("${state['scoreAI']}", style: const TextStyle(color: Colors.blue, fontSize: 60, fontWeight: FontWeight.bold)),
+                            Text("${state['scorePlayer']}", style: const TextStyle(color: Colors.red, fontSize: 60, fontWeight: FontWeight.bold)),
                           ],
                         ),
                       ),
 
                       // Mingea
                       Positioned(
-                          left: state!['ballX'].toDouble(),
-                          top: state!['ballY'].toDouble(),
+                          left: state['ballX'].toDouble(),
+                          top: state['ballY'].toDouble(),
                           child: Container(width: 20, height: 20, decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle))
                       ),
 
                       // Paleta Jucător (Roșie)
-                      Positioned(right: 20, top: state!['p1Y'].toDouble(), child: Container(width: 15, height: 100, color: Colors.red)),
+                      Positioned(right: 20, top: state['p1Y'].toDouble(), child: Container(width: 15, height: 100, color: Colors.red)),
 
                       // Paleta AI (Albastră)
-                      Positioned(left: 20, top: state!['p2Y'].toDouble(), child: Container(width: 15, height: 100, color: Colors.blue)),
+                      Positioned(left: 20, top: state['p2Y'].toDouble(), child: Container(width: 15, height: 100, color: Colors.blue)),
 
-                      // Mesaj Final (Game Over)
-                      if (state!['message'] != "")
+                      // Mesaj Game Over
+                      if (state['message'] != "")
                         Container(
                           color: Colors.black87,
                           child: Center(
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Text(state!['message'], style: const TextStyle(color: Colors.white, fontSize: 40, fontWeight: FontWeight.bold)),
+                                Text(state['message'], style: const TextStyle(color: Colors.white, fontSize: 40, fontWeight: FontWeight.bold)),
                                 const SizedBox(height: 30),
                                 ElevatedButton(
                                   style: ElevatedButton.styleFrom(backgroundColor: Colors.green, padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15)),
@@ -148,7 +167,8 @@ class _PongProState extends State<PongPro> {
 
   @override
   void dispose() {
-    channel.sink.close();
+    _channel?.sink.close();
     super.dispose();
   }
 }
+//flutter run -d chrome
