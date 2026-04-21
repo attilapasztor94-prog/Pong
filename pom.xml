@@ -6,14 +6,14 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.2.4</version> <relativePath/>
+        <version>3.2.4</version>
+        <relativePath/>
     </parent>
 
     <groupId>org.example</groupId>
     <artifactId>Pong</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>Pong</name>
-    <description>Pong</description>
 
     <properties>
         <java.version>17</java.version>
@@ -24,7 +24,6 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-websocket</artifactId>
         </dependency>
-
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
