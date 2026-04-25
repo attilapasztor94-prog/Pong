@@ -2,39 +2,37 @@ package org.example.pong.model;
 
 public class GameState {
     private double ballX = 400, ballY = 200;
-    private double ballDX = 5, ballDY = 5; // Viteza puțin mărită
-    private double p1Y = 150, p2Y = 150;
+    private double ballDX = 5, ballDY = 5;
+    private double p1Y = 150, p2Y = 150; // p1Y = Tu (Dreapta), p2Y = AI (Stânga)
     private int scorePlayer = 0, scoreAI = 0;
     private String message = "";
-    private String playerName = "Jucător"; // Nume default
+    private String playerName = "Jucător";
 
     public void setPlayerName(String name) {
         this.playerName = name;
     }
 
     public void update() {
-        if (!message.isEmpty()) return; // Jocul se oprește dacă avem un câștigător
+        if (!message.isEmpty()) return;
 
         ballX += ballDX;
         ballY += ballDY;
 
-        // Ricoșeu sus/jos
         if (ballY <= 0 || ballY >= 380) ballDY *= -1;
 
-        // Coliziune palete
         if (ballX <= 35 && ballY >= p2Y && ballY <= p2Y + 100) ballDX = Math.abs(ballDX);
         if (ballX >= 750 && ballY >= p1Y && ballY <= p1Y + 100) ballDX = -Math.abs(ballDX);
 
-        // AI-ul urmărește mingea
         if (ballY > p2Y + 50) p2Y += 3.5;
         else p2Y -= 3.5;
 
-        // Verificare scor
+        // Mingea iese prin STÂNGA (Punct pentru Jucător/Tine)
         if (ballX < 0) {
             scorePlayer++;
             checkWin();
             resetBall();
         }
+        // Mingea iese prin DREAPTA (Punct pentru AI)
         if (ballX > 800) {
             scoreAI++;
             checkWin();
@@ -43,11 +41,11 @@ public class GameState {
     }
 
     private void checkWin() {
-        // LIMITA DE 5 PUNCTE
+        // --- LOGICA REPARATĂ AICI ---
         if (scorePlayer >= 5) {
-            message = "AI-ul a câștigat!";
+            message = playerName + " a câștigat!"; // DACĂ TU AI 5, TU CÂȘTIGI
         } else if (scoreAI >= 5) {
-            message = playerName + " a câștigat!";
+            message = "AI-ul a câștigat!";         // DACĂ AI ARE 5, EL CÂȘTIGĂ
         }
     }
 
@@ -57,7 +55,6 @@ public class GameState {
         ballDX *= -1;
     }
 
-    // Getters necesari pentru GameEngine
     public double getBallX() { return ballX; }
     public double getBallY() { return ballY; }
     public double getP1Y() { return p1Y; }
