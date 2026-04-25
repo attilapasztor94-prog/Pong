@@ -1,33 +1,61 @@
 package org.example.pong.service;
-import org.example.pong.model.GameState; // 2. IMPORTUL CORECTAT (nu mai e com.example)
+
+import org.example.pong.model.GameState;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import java.io.IOException;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-@Service // 3. Adnotarea care îl face vizibil pentru PongHandler
+@Service
 public class GameEngine {
     private final CopyOnWriteArrayList<WebSocketSession> sessions = new CopyOnWriteArrayList<>();
     private GameState state = new GameState();
 
-    public void addSession(WebSocketSession session) { sessions.add(session); }
-    public void removeSession(WebSocketSession session) { sessions.remove(session); }
+    public void addSession(WebSocketSession session) {
+        sessions.add(session);
+    }
+
+    public void removeSession(WebSocketSession session) {
+        sessions.remove(session);
+    }
+
+    // Aceasta este "Inima". Rulează singură la fiecare 20ms (50 FPS)
+    @Scheduled(fixedRate = 20)
+    public void gameLoop() {
+        if (sessions.isEmpty()) return; // Nu consumăm resurse dacă nu e nimeni conectat
+
+        state.update(); // 1. Mișcăm mingea, verificăm coliziuni (în GameState)
+        broadcast();    // 2. Trimitem noua stare către toți jucătorii
+    }
 
     public void updatePaddle(double y) {
-        state.setPaddleY(y);
-        broadcast();
+        state.setP1Y(y); // Jucătorul mișcă paleta (presupunem că P1Y e jucătorul)
     }
 
     public void restartGame() {
         state = new GameState();
-        broadcast();
     }
 
     private void broadcast() {
-        String json = String.format("{\"paddleY\": %f}", state.getPaddleY());
+        // Construim JSON-ul exact așa cum îl așteaptă Flutter
+        String json = String.format(
+                "{\"ballX\": %f, \"ballY\": %f, \"p1Y\": %f, \"p2Y\": %f, \"scoreAI\": %d, \"scorePlayer\": %d, \"message\": \"%s\"}",
+                state.getBallX(), state.getBallY(),
+                state.getP1Y(), state.getP2Y(),
+                state.getScoreAI(), state.getScorePlayer(),
+                state.getMessage() == null ? "" : state.getMessage()
+        );
+
         for (WebSocketSession s : sessions) {
-            try { s.sendMessage(new TextMessage(json)); } catch (IOException ignored) {}
+            try {
+                if (s.isOpen()) {
+                    s.sendMessage(new TextMessage(json));
+                }
+            } catch (IOException e) {
+                sessions.remove(s);
+            }
         }
     }
 }
