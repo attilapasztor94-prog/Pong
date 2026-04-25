@@ -1,4 +1,5 @@
 package org.example.pong.config;
+
 import org.example.pong.service.GameEngine;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -26,13 +27,23 @@ public class PongHandler extends TextWebSocketHandler {
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage message) {
         String payload = message.getPayload();
-        if (payload.equals("RESET")) {
+
+        // Verificăm dacă Flutter ne trimite numele (ex: "NAME:Andrei")
+        if (payload.startsWith("NAME:")) {
+            String name = payload.substring(5);
+            engine.setPlayerName(name);
+        }
+        // Verificăm dacă e comandă de restart
+        else if (payload.equals("RESET")) {
             engine.restartGame();
-        } else {
+        }
+        // Altfel, considerăm că e coordonata Y pentru paletă
+        else {
             try {
-                // Primește poziția Y a paletei de la Flutter
                 engine.updatePaddle(Double.parseDouble(payload));
-            } catch (NumberFormatException ignored) {}
+            } catch (NumberFormatException ignored) {
+                // Mesaj invalid, îl ignorăm
+            }
         }
     }
 }

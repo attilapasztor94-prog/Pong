@@ -21,41 +21,38 @@ public class GameEngine {
         sessions.remove(session);
     }
 
-    // Aceasta este "Inima". Rulează singură la fiecare 20ms (50 FPS)
-    @Scheduled(fixedRate = 20)
-    public void gameLoop() {
-        if (sessions.isEmpty()) return; // Nu consumăm resurse dacă nu e nimeni conectat
-
-        state.update(); // 1. Mișcăm mingea, verificăm coliziuni (în GameState)
-        broadcast();    // 2. Trimitem noua stare către toți jucătorii
+    // Aceasta este metoda care îți rezolvă eroarea roșie din imagine!
+    public void setPlayerName(String name) {
+        state.setPlayerName(name);
     }
 
     public void updatePaddle(double y) {
-        state.setP1Y(y); // Jucătorul mișcă paleta (presupunem că P1Y e jucătorul)
+        state.setP1Y(y);
     }
 
     public void restartGame() {
         state = new GameState();
     }
 
+    @Scheduled(fixedRate = 20)
+    public void gameLoop() {
+        if (sessions.isEmpty()) return;
+        state.update();
+        broadcast();
+    }
+
     private void broadcast() {
-        // Construim JSON-ul exact așa cum îl așteaptă Flutter
         String json = String.format(
                 "{\"ballX\": %f, \"ballY\": %f, \"p1Y\": %f, \"p2Y\": %f, \"scoreAI\": %d, \"scorePlayer\": %d, \"message\": \"%s\"}",
-                state.getBallX(), state.getBallY(),
-                state.getP1Y(), state.getP2Y(),
-                state.getScoreAI(), state.getScorePlayer(),
-                state.getMessage() == null ? "" : state.getMessage()
+                state.getBallX(), state.getBallY(), state.getP1Y(), state.getP2Y(),
+                state.getScoreAI(), state.getScorePlayer(), state.getMessage()
         );
-
         for (WebSocketSession s : sessions) {
             try {
                 if (s.isOpen()) {
                     s.sendMessage(new TextMessage(json));
                 }
-            } catch (IOException e) {
-                sessions.remove(s);
-            }
+            } catch (IOException ignored) {}
         }
     }
 }

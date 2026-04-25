@@ -1,38 +1,35 @@
 package org.example.pong.model;
 
 public class GameState {
-    // Dimensiunile câmpului de joc (trebuie să bată cu cele din Flutter: 800x400)
     private double ballX = 400, ballY = 200;
-    private double ballDX = 4, ballDY = 4;
-    private double p1Y = 150, p2Y = 150; // P1 este Jucătorul, P2 este AI
+    private double ballDX = 5, ballDY = 5; // Viteza puțin mărită
+    private double p1Y = 150, p2Y = 150;
     private int scorePlayer = 0, scoreAI = 0;
     private String message = "";
+    private String playerName = "Jucător"; // Nume default
 
-    // Logica de mișcare a mingii (Game Loop)
+    public void setPlayerName(String name) {
+        this.playerName = name;
+    }
+
     public void update() {
-        if (!message.isEmpty()) return; // Joc oprit dacă avem mesaj (Win/Loss)
+        if (!message.isEmpty()) return; // Jocul se oprește dacă avem un câștigător
 
         ballX += ballDX;
         ballY += ballDY;
 
-        // Coliziune sus/jos
+        // Ricoșeu sus/jos
         if (ballY <= 0 || ballY >= 380) ballDY *= -1;
 
-        // Coliziune Paleta AI (Stânga - P2)
-        if (ballX <= 35 && ballY >= p2Y && ballY <= p2Y + 100) {
-            ballDX = Math.abs(ballDX); // Ricoșează la dreapta
-        }
+        // Coliziune palete
+        if (ballX <= 35 && ballY >= p2Y && ballY <= p2Y + 100) ballDX = Math.abs(ballDX);
+        if (ballX >= 750 && ballY >= p1Y && ballY <= p1Y + 100) ballDX = -Math.abs(ballDX);
 
-        // Coliziune Paleta Jucător (Dreapta - P1)
-        if (ballX >= 750 && ballY >= p1Y && ballY <= p1Y + 100) {
-            ballDX = -Math.abs(ballDX); // Ricoșează la stânga
-        }
+        // AI-ul urmărește mingea
+        if (ballY > p2Y + 50) p2Y += 3.5;
+        else p2Y -= 3.5;
 
-        // Logică AI simplă pentru P2 (urmărește mingea)
-        if (ballY > p2Y + 50) p2Y += 3;
-        else p2Y -= 3;
-
-        // Scor și Reset
+        // Verificare scor
         if (ballX < 0) {
             scorePlayer++;
             checkWin();
@@ -45,17 +42,22 @@ public class GameState {
         }
     }
 
-    private void resetBall() {
-        ballX = 400; ballY = 200;
-        ballDX *= -1; // Schimbă direcția la restart
-    }
-
     private void checkWin() {
-        if (scorePlayer >= 10) message = "AI-ul a pierdut!";
-        if (scoreAI >= 10) message = "Ai pierdut!";
+        // LIMITA DE 5 PUNCTE
+        if (scorePlayer >= 5) {
+            message = "AI-ul a câștigat!";
+        } else if (scoreAI >= 5) {
+            message = playerName + " a câștigat!";
+        }
     }
 
-    // GETTERS & SETTERS (Metodele pe care le căuta GameEngine)
+    private void resetBall() {
+        ballX = 400;
+        ballY = 200;
+        ballDX *= -1;
+    }
+
+    // Getters necesari pentru GameEngine
     public double getBallX() { return ballX; }
     public double getBallY() { return ballY; }
     public double getP1Y() { return p1Y; }
