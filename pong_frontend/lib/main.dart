@@ -5,7 +5,6 @@ import 'dart:convert';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  // Blocăm ecranul în mod Landscape (util pentru mobil, ignorat pe Desktop browser)
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.landscapeLeft,
     DeviceOrientation.landscapeRight,
@@ -27,24 +26,34 @@ class PongPro extends StatefulWidget {
 class _PongProState extends State<PongPro> {
   WebSocketChannel? _channel;
 
+  // LOGICA PENTRU NUME
+  bool isNameEntered = false;
+  final TextEditingController _nameController = TextEditingController();
+
+  // NU mai apelăm _connectToRender în initState!
+  // O vom apela doar după ce utilizatorul apasă butonul START.
   @override
   void initState() {
     super.initState();
-    _connectToRender();
   }
 
   void _connectToRender() {
-    // Închidem conexiunea veche dacă există înainte de a reîncerca
     _channel?.sink.close();
     setState(() {
       _channel = WebSocketChannel.connect(
         Uri.parse('wss://pong-6tqc.onrender.com/ws'),
       );
     });
+
+    // Trimitem numele la server imediat ce conexiunea s-a stabilit
+    Future.delayed(const Duration(milliseconds: 1000), () {
+      if (_nameController.text.isNotEmpty) {
+        _channel?.sink.add("NAME:${_nameController.text}");
+      }
+    });
   }
 
   void sendMove(double y) {
-    // Trimitem coordonata Y către server
     _channel?.sink.add(y.toString());
   }
 
@@ -56,153 +65,169 @@ class _PongProState extends State<PongPro> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[900],
-      body: StreamBuilder(
-        stream: _channel?.stream,
-        builder: (context, snapshot) {
-          // CAZ 1: Eroare sau Server Offline
-          if (snapshot.hasError) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.cloud_off, color: Colors.redAccent, size: 60),
-                  const SizedBox(height: 20),
-                  const Text(
-                    "Conexiune pierdută sau serverul doarme...\n(Render poate dura 50s să pornească)",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.white, fontSize: 18),
-                  ),
-                  const SizedBox(height: 20),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
-                    onPressed: _connectToRender,
-                    child: const Text("RECONECTARE", style: TextStyle(color: Colors.white)),
-                  )
-                ],
-              ),
-            );
-          }
+      // AICI SE FACE MAGIA: Dacă nu a introdus numele, arătăm ecranul de nume
+      body: !isNameEntered ? _buildNameInputScreen() : _buildGameScreen(),
+    );
+  }
 
-          // CAZ 2: Se așteaptă date (Loading)
-          if (!snapshot.hasData) {
-            return const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircularProgressIndicator(color: Colors.blue),
-                  SizedBox(height: 20),
-                  Text("Se stabilește conexiunea cu Render...",
-                      style: TextStyle(color: Colors.white70)),
-                ],
-              ),
-            );
-          }
-
-          // CAZ 3: Conexiune activă - Decodare Date
-          dynamic state;
-          try {
-            state = json.decode(snapshot.data.toString());
-          } catch (e) {
-            return const Center(child: Text("Eroare la procesarea datelor jocului"));
-          }
-
-          return Center(
-            child: FittedBox( // Se asigură că jocul încape pe orice ecran
-              child: Container(
-                width: 800,
-                height: 400,
-                decoration: BoxDecoration(
-                  color: Colors.black,
-                  border: Border.all(color: Colors.white24, width: 4),
-                  boxShadow: [
-                    BoxShadow(color: Colors.blue.withOpacity(0.2), blurRadius: 20)
-                  ],
+  // ECRANUL DE START (INTRODUCERE NUME)
+  Widget _buildNameInputScreen() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Text(
+            "PONG MULTIPLAYER",
+            style: TextStyle(color: Colors.white, fontSize: 40, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 40),
+          SizedBox(
+            width: 300,
+            child: TextField(
+              controller: _nameController,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                filled: true,
+                fillColor: Colors.black,
+                labelText: "Introdu numele tău",
+                labelStyle: const TextStyle(color: Colors.blueAccent),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: const BorderSide(color: Colors.blueAccent),
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                child: MouseRegion(
-                  onHover: (event) => sendMove(event.localPosition.dy),
-                  child: GestureDetector(
-                    onVerticalDragUpdate: (details) => sendMove(details.localPosition.dy),
-                    child: Stack(
-                      children: [
-                        // Linia de mijloc (design retro)
-                        Center(child: Container(width: 4, color: Colors.white10)),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: const BorderSide(color: Colors.white),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 30),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blueAccent,
+              padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 20),
+            ),
+            onPressed: () {
+              if (_nameController.text.isNotEmpty) {
+                setState(() {
+                  isNameEntered = true; // Schimbăm starea pentru a afișa jocul
+                });
+                _connectToRender(); // Pornim conexiunea
+              }
+            },
+            child: const Text("START JOC", style: TextStyle(fontSize: 18, color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
 
-                        // Scor AI
-                        Positioned(
-                          top: 20, left: 150,
-                          child: Text("${state['scoreAI']}",
-                              style: TextStyle(color: Colors.blue.withOpacity(0.5), fontSize: 80, fontWeight: FontWeight.bold)),
-                        ),
+  // ECRANUL DE JOC (STREAM BUILDER-UL TĂU)
+  Widget _buildGameScreen() {
+    return StreamBuilder(
+      stream: _channel?.stream,
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.cloud_off, color: Colors.redAccent, size: 60),
+                const Text("Eroare de conexiune!", style: TextStyle(color: Colors.white)),
+                ElevatedButton(onPressed: _connectToRender, child: const Text("RECONECTARE"))
+              ],
+            ),
+          );
+        }
 
-                        // Scor Player
-                        Positioned(
-                          top: 20, right: 150,
-                          child: Text("${state['scorePlayer']}",
-                              style: TextStyle(color: Colors.red.withOpacity(0.5), fontSize: 80, fontWeight: FontWeight.bold)),
-                        ),
+        if (!snapshot.hasData) {
+          return const Center(child: CircularProgressIndicator(color: Colors.blue));
+        }
 
-                        // Mingea
-                        Positioned(
-                            left: state['ballX'].toDouble(),
-                            top: state['ballY'].toDouble(),
-                            child: Container(
-                                width: 20, height: 20,
-                                decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle,
-                                    boxShadow: [BoxShadow(color: Colors.white, blurRadius: 10)])
-                            )
-                        ),
+        final state = json.decode(snapshot.data.toString());
 
-                        // Paleta Player (Roșie - Dreapta)
-                        Positioned(
-                            right: 20,
-                            top: state['p1Y'].toDouble(),
-                            child: Container(width: 15, height: 100, decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(4)))
-                        ),
+        return Center(
+          child: FittedBox(
+            child: Container(
+              width: 800,
+              height: 400,
+              decoration: BoxDecoration(
+                color: Colors.black,
+                border: Border.all(color: Colors.white24, width: 4),
+              ),
+              child: MouseRegion(
+                onHover: (event) => sendMove(event.localPosition.dy),
+                child: GestureDetector(
+                  onVerticalDragUpdate: (details) => sendMove(details.localPosition.dy),
+                  child: Stack(
+                    children: [
+                      Center(child: Container(width: 4, color: Colors.white10)),
 
-                        // Paleta AI (Albastră - Stânga)
-                        Positioned(
-                            left: 20,
-                            top: state['p2Y'].toDouble(),
-                            child: Container(width: 15, height: 100, decoration: BoxDecoration(color: Colors.blue, borderRadius: BorderRadius.circular(4)))
-                        ),
+                      // Scor AI
+                      Positioned(
+                        top: 20, left: 150,
+                        child: Text("${state['scoreAI']}",
+                            style: TextStyle(color: Colors.blue.withOpacity(0.5), fontSize: 80, fontWeight: FontWeight.bold)),
+                      ),
 
-                        // Mesaj Game Over / Start
-                        if (state['message'] != null && state['message'] != "")
-                          Container(
-                            color: Colors.black87,
-                            child: Center(
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(state['message'],
-                                      style: const TextStyle(color: Colors.white, fontSize: 40, fontWeight: FontWeight.bold)),
-                                  const SizedBox(height: 30),
-                                  ElevatedButton(
-                                    style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.green,
-                                        padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15)
-                                    ),
-                                    onPressed: resetGame,
-                                    child: const Text("RESTART JOC", style: TextStyle(fontSize: 20, color: Colors.white)),
-                                  )
-                                ],
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
+                      // Scor Player
+                      Positioned(
+                        top: 20, right: 150,
+                        child: Text("${state['scorePlayer']}",
+                            style: TextStyle(color: Colors.red.withOpacity(0.5), fontSize: 80, fontWeight: FontWeight.bold)),
+                      ),
+
+                      // Mingea
+                      Positioned(
+                          left: state['ballX'].toDouble(),
+                          top: state['ballY'].toDouble(),
+                          child: Container(width: 20, height: 20, decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle))
+                      ),
+
+                      // Paletele
+                      Positioned(right: 20, top: state['p1Y'].toDouble(), child: _paddle(Colors.red)),
+                      Positioned(left: 20, top: state['p2Y'].toDouble(), child: _paddle(Colors.blue)),
+
+                      // Mesaj Final
+                      if (state['message'] != null && state['message'] != "")
+                        _buildGameOverScreen(state['message']),
+                    ],
                   ),
                 ),
               ),
             ),
-          );
-        },
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _paddle(Color color) => Container(width: 15, height: 100, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(4)));
+
+  Widget _buildGameOverScreen(String message) {
+    return Container(
+      color: Colors.black87,
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(message, style: const TextStyle(color: Colors.white, fontSize: 40, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 30),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+              onPressed: resetGame,
+              child: const Text("RESTART JOC", style: TextStyle(fontSize: 20, color: Colors.white)),
+            )
+          ],
+        ),
       ),
     );
   }
 
   @override
   void dispose() {
+    _nameController.dispose();
     _channel?.sink.close();
     super.dispose();
   }
